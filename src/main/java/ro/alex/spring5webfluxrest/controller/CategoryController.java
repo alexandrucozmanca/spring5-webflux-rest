@@ -1,15 +1,12 @@
 package ro.alex.spring5webfluxrest.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.reactivestreams.Publisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ro.alex.spring5webfluxrest.domain.Category;
 import ro.alex.spring5webfluxrest.repository.CategoryRepository;
-
-import java.util.Map;
 
 @RestController
 public class CategoryController {
@@ -24,7 +21,7 @@ public class CategoryController {
 
 
     @GetMapping(BASE_URL)
-    Flux<Category> list() {
+    Flux<Category> listAll() {
         return categoryRepository.findAll();
     }
 
@@ -33,4 +30,28 @@ public class CategoryController {
         return categoryRepository.findById(id);
     }
 
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping(BASE_URL)
+    Mono<Void> create(@RequestBody  Publisher<Category> categoryPublisher){
+        return categoryRepository.saveAll(categoryPublisher).then();
+    }
+
+    @PutMapping(BASE_URL + "/{id}")
+    Mono<Category> update(@PathVariable String id, @RequestBody Category category){
+        category.setId(id);
+        return categoryRepository.save(category);
+    }
+
+    @PatchMapping(BASE_URL + "/{id}")
+    Mono<Category> patch(@PathVariable String id, @RequestBody Category category){
+
+        Category foundCategory = categoryRepository.findById(id).block();
+
+        if(!(foundCategory.getDescription().equals(category.getDescription()))){
+            foundCategory.setDescription(category.getDescription());
+            return  categoryRepository.save(foundCategory);
+        }
+
+        return Mono.just(foundCategory);
+    }
 }
